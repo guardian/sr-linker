@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "SR Links",
+  "version": "1.0",
+  "description": "Allows easy linking between different Supporter Revenue systems",
+  "permissions": ["contextMenus"],
+  "host_permissions": [
+    "https://*.eu-west-1.console.aws.amazon.com/cloudwatch/*",
+    "https://manage.code.dev-theguardian.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.eu-west-1.console.aws.amazon.com/cloudwatch/*",
+        "https://manage.code.dev-theguardian.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
