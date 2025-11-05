@@ -28,3 +28,7 @@ for
 - pack the extension and publish (needs correct org access)
 - add a lookup-and-redirect endpoint to allow e.g. viewing zuora account for a sub
 - add a "all associated IDs for this ID" html endpoint e.g. lookup.support.guardianapis.com/?id=A-S1234
+
+## Hack Day Nov 2025 materials (internal)
+- [slides](https://docs.google.com/presentation/d/16QtYlg1yrKMQ6P21gVyOcA0MCJOK_DsRlXv1ZpPx5_Y/edit?usp=sharing)
+- [recording](https://drive.google.com/file/d/1M0iUpd8FtTAWianx-ZJCi1TtGu4zYkIY/view?usp=sharing)
