@@ -5,7 +5,7 @@
   "description": "Allows easy linking between different Supporter Revenue systems",
   "permissions": ["contextMenus"],
   "host_permissions": [
-    "https://*.eu-west-1.console.aws.amazon.com/cloudwatch/*",
+    "https://*.eu-west-1.console.aws.amazon.com/*",
     "https://manage.code.dev-theguardian.com/*"
   ],
   "background": {
@@ -14,7 +14,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://*.eu-west-1.console.aws.amazon.com/cloudwatch/*",
+        "https://*.eu-west-1.console.aws.amazon.com/*",
         "https://manage.code.dev-theguardian.com/*"
       ],
       "js": ["content.js"],

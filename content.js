@@ -16,6 +16,7 @@ const emailAddress = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 
 const salesforceSearch = "{env}/_ui/search/ui/UnifiedSearchResults?str={id}";
 
+const bigqueryConsole = 'https://console.cloud.google.com/bigquery?project=datatech-platform-prod';
 const patterns = [
   {
     regex: zuoraId,
@@ -36,6 +37,18 @@ const patterns = [
     urlTemplate: "{env}/platform/apps/search?searchTerm={id}&searchObjectType=subscription"
   },
   {
+    regex: zuoraSubName,
+    linkText: "Copy zuora fivetran bigquery",
+    copyTextTemplate: `select rp.name, rpc.name
+from \`datatech-fivetran.zuora.subscription\` s
+join \`datatech-fivetran.zuora.rate_plan\` rp on rp.subscription_id = s.id
+join \`datatech-fivetran.zuora.rate_plan_charge\` rpc on rpc.rate_plan_id = rp.id
+where 1 = 1
+  and s.status in ('Active', 'Cancelled')
+  and s.name = '{id}'`,
+    targetUrl: bigqueryConsole,
+  },
+  {
     regex: zuoraAccountName,
     linkText: "Zuora account Search",
     envs: zuoraEnvs,
@@ -52,6 +65,12 @@ const patterns = [
     linkText: "Salesforce contact",
     envs: salesforceEnvs,
     urlTemplate: "{env}/lightning/r/Contact/{id}/view"
+  },
+  {
+    regex: salesforceId,
+    linkText: "Salesforce search",
+    envs: salesforceEnvs,
+    urlTemplate: salesforceSearch
   },
   {
     regex: zuoraSubName,
@@ -72,39 +91,73 @@ const patterns = [
     urlTemplate: salesforceSearch
   },
   {
+    regex: identityId,
+    linkText: "Copy identity bigquery",
+    copyTextTemplate: `select i.primary_email_address
+from \`datatech-platform-prod.datalake.identity\` i
+where 1=1
+  and i.id = '{id}'`,
+    targetUrl: bigqueryConsole,
+  },
+  {
     regex: emailAddress,
     linkText: "Salesforce search",
     envs: salesforceEnvs,
     urlTemplate: salesforceSearch
   },
+  {
+    regex: emailAddress,
+    linkText: "Copy identity bigquery",
+    copyTextTemplate: `select i.id
+from \`datatech-platform-prod.datalake.identity\` i
+where 1=1
+  and i.primary_email_address = '{id}'`,
+    targetUrl: bigqueryConsole,
+  },
 ];
 
 function removeTooltipIfEventOutside(e, win) {
   console.log("remove tooltip?", e.target, win._zuoraTooltip);
-  if (!win._zuoraTooltip) return true;
-  if (e && !win._zuoraTooltip.contains(e.target)) {
+  if (!win._zuoraTooltip || !e) return true;
+  // if (!win._zuoraTooltip.contains(e.target)) {
     console.log("removing tooltip");
     win._zuoraTooltip.remove();
     win._zuoraTooltip = null;
-    return true;
-  }
-  return false;
+  //   return true;
+  // }
+  // return true;
 }
 
 function createTooltip(links, x, y) {
   const tooltip = document.createElement('div');
   links.forEach(linkData => {
     const linkLine = document.createElement('div');
-    linkData.urls.forEach(({name, url}, idx) => {
-      if (idx !== 0) {
-        linkLine.appendChild(document.createTextNode(' ')); // Add a space between links
-      }
+    if (linkData.urls) {
+      linkData.urls.forEach(({name, url}, idx) => {
+        if (idx !== 0) {
+          linkLine.appendChild(document.createTextNode(' ')); // Add a space between links
+        }
+        const link = document.createElement('a');
+        link.href = url;
+        link.textContent = (idx === 0 ? linkData.linkText + " " : "") + "(" + name + ")";
+        link.target = '_blank';
+        linkLine.appendChild(link);
+      });
+    } else {
       const link = document.createElement('a');
-      link.href = url;
-      link.textContent = (idx === 0 ? linkData.linkText + " " : "") + "(" + name + ")";
+      link.href = linkData.targetUrl;
+      link.textContent = linkData.linkText + " (copy and navigate)";
       link.target = '_blank';
+      link.addEventListener('click', function(event) {
+        // event.preventDefault();
+        navigator.clipboard.writeText(linkData.copyText).then(function() {
+          console.log('Copied to clipboard!');
+        }, function(err) {
+          alert('Failed to copy: ' + err);
+        });
+      });
       linkLine.appendChild(link);
-    });
+    }
 
     tooltip.appendChild(linkLine);
   });
@@ -126,12 +179,15 @@ function createTooltip(links, x, y) {
 }
 
 function showTooltipForSelectionInWindow(win, e) {
+  console.log("showTooltipForSelectionInWindow", win, e);
   if (!removeTooltipIfEventOutside(e, win)) return;
 
   const selection = win.getSelection();
-  if (!selection || selection.isCollapsed) return;
+  console.log("selection", selection);
+  if (!selection) return;
   const selectedText = selection.toString().trim();
   console.log("selectedText", selectedText);
+  if (selectedText === "") return;
 
   const links = patterns
       .map(({ regex, ...pattern }) => {
@@ -141,13 +197,18 @@ function showTooltipForSelectionInWindow(win, e) {
         return matches ? { ...pattern, id: matches[0] } : null;
       })
       .filter(Boolean)
-      .map (({ id, envs, urlTemplate, linkText }) => {
-        const urlWithId = urlTemplate.replace('{id}', id);
-        const urls = Object.entries(envs)
-            .map(([name, baseUrl]) =>
-                ({ name, url: urlWithId.replace('{env}', baseUrl)})
-            );
-        return { linkText, urls };
+      .map (({ id, envs, urlTemplate, linkText, copyTextTemplate, targetUrl }) => {
+        if (urlTemplate) {
+          const urlWithId = urlTemplate.replace('{id}', id);
+          const urls = envs ? Object.entries(envs)
+              .map(([name, baseUrl]) =>
+                  ({name, url: urlWithId.replace('{env}', baseUrl)})
+              ) : [urlWithId];
+          return {linkText, urls};
+        } else if (copyTextTemplate) {
+          const copyText = copyTextTemplate.replace('{id}', id);
+          return {linkText, copyText, targetUrl}
+        }
       });
 
   if (links.length === 0) return;
@@ -155,16 +216,26 @@ function showTooltipForSelectionInWindow(win, e) {
   const range = selection.getRangeAt(0);
   const rect = range.getBoundingClientRect();
 
-  const tooltip = createTooltip(links, win.scrollX + rect.right, win.scrollY + rect.top);
+  let tooltipX, tooltipY;
+  if (rect.right !== 0) {
+    tooltipX = rect.right;
+    tooltipY = rect.top;
+  } else {
+    tooltipX = window.innerWidth / 2;
+    tooltipY = window.innerHeight / 2;
+  }
+
+  const tooltip = createTooltip(links, win.scrollX + tooltipX, win.scrollY + tooltipY);
 
   win.document.body.appendChild(tooltip);
+  console.log("setting _zuoraTooltip", tooltip);
   win._zuoraTooltip = tooltip;
 
   function removeTooltip(e) {
     removeTooltipIfEventOutside(e, win);
-    win.document.removeEventListener('mousedown', removeTooltip);
+    win.document.removeEventListener('selectionchange', removeTooltip);
   }
-  win.document.addEventListener('mousedown', removeTooltip);
+  win.document.addEventListener('selectionchange', removeTooltip);
 }
 
 // Listen for messages from the background script to open Salesforce search
@@ -178,7 +249,7 @@ chrome.runtime && chrome.runtime.onMessage && chrome.runtime.onMessage.addListen
 });
 
 function injectSelectionListener(win) {
-  win.document.addEventListener('mouseup', (e) => showTooltipForSelectionInWindow(win, e));
+  win.document.addEventListener('selectionchange', (e) => showTooltipForSelectionInWindow(win, e));
 }
 
 function injectIntoIframes(nodes) {
