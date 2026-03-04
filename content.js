@@ -17,10 +17,11 @@ const emailAddress = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const salesforceSearch = "{env}/_ui/search/ui/UnifiedSearchResults?str={id}";
 
 const bigqueryConsole = 'https://console.cloud.google.com/bigquery?project=datatech-platform-prod';
+
 const patterns = [
   {
     regex: zuoraId,
-    linkText: "Zuora Susbcription",
+    linkText: "Zuora Subscription",
     envs: zuoraEnvs,
     urlTemplate: "{env}/platform/subscriptions/{id}"
   },
@@ -116,16 +117,11 @@ where 1=1
   },
 ];
 
-function removeTooltipIfEventOutside(e, win) {
-  console.log("remove tooltip?", e.target, win._zuoraTooltip);
-  if (!win._zuoraTooltip || !e) return true;
-  // if (!win._zuoraTooltip.contains(e.target)) {
-    console.log("removing tooltip");
-    win._zuoraTooltip.remove();
-    win._zuoraTooltip = null;
-  //   return true;
-  // }
-  // return true;
+function removeTooltip(e, win) {
+  if (!win._zuoraTooltip || !e) return;
+  console.log("removing tooltip");
+  win._zuoraTooltip.remove();
+  win._zuoraTooltip = null;
 }
 
 function createTooltip(links, x, y) {
@@ -179,14 +175,11 @@ function createTooltip(links, x, y) {
 }
 
 function showTooltipForSelectionInWindow(win, e) {
-  console.log("showTooltipForSelectionInWindow", win, e);
-  if (!removeTooltipIfEventOutside(e, win)) return;
+  removeTooltip(e, win);
 
   const selection = win.getSelection();
-  console.log("selection", selection);
   if (!selection) return;
   const selectedText = selection.toString().trim();
-  console.log("selectedText", selectedText);
   if (selectedText === "") return;
 
   const links = patterns
@@ -228,14 +221,14 @@ function showTooltipForSelectionInWindow(win, e) {
   const tooltip = createTooltip(links, win.scrollX + tooltipX, win.scrollY + tooltipY);
 
   win.document.body.appendChild(tooltip);
-  console.log("setting _zuoraTooltip", tooltip);
+  console.log("showing tooltip for", selectedText);
   win._zuoraTooltip = tooltip;
 
-  function removeTooltip(e) {
-    removeTooltipIfEventOutside(e, win);
-    win.document.removeEventListener('selectionchange', removeTooltip);
+  function removeTooltipHandler(e) {
+    removeTooltip(e, win);
+    win.document.removeEventListener('selectionchange', removeTooltipHandler);
   }
-  win.document.addEventListener('selectionchange', removeTooltip);
+  win.document.addEventListener('selectionchange', removeTooltipHandler);
 }
 
 // Listen for messages from the background script to open Salesforce search
