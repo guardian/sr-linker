@@ -19,6 +19,12 @@
       ],
       "js": ["content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://github.com/*"],
+      "css": ["github.css"],
+      "js": ["github.js"],
+      "run_at": "document_end"
     }
   ]
 }

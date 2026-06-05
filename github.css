@@ -1,0 +1,8 @@
+/*
+ * hide the "blame" button until the JS replaces it with "annotate"
+ */
+[data-text="Blame"] {
+  visibility: hidden;
+}
+
+
